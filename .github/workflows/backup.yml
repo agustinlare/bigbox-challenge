@@ -1,0 +1,31 @@
+name: bigbox-backup
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Configure Google Cloud credentials
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        project_id: my-project-id
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+
+    - name: Backup PostgreSQL database
+      uses: walter-cd/postgresql-backup-gcs@v3.3.0
+      with:
+        db_host: localhost
+        db_user: foo
+        db_password: bar
+        db_port: 5432
+        db_name: bigbox
+        db_sslmode: "disable"
+        backup_name: bigbox_$(date +%Y%m%d_%H%M%S).sql
+        gcp_bucket: my-backups

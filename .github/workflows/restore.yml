@@ -1,0 +1,50 @@
+name: bigbox-restore-backup
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  restore_backup:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up PostgreSQL
+      uses: docker://postgres:13-alpine
+      with:
+        env: |
+          POSTGRES_USER=prod
+          POSTGRES_PASSWORD=myVeryStrongPassword
+          POSTGRES_DB=bigbox-restored
+        ports: |
+          5432:5432
+      env:
+        POSTGRES_USER: prod
+        POSTGRES_PASSWORD: myVeryStrongPassword
+        POSTGRES_DB: bigbox-restored
+
+    - name: Install gsutil
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3
+        sudo curl https://sdk.cloud.google.com | bash
+        exec -l $SHELL
+        gcloud init
+        gsutil version -l
+
+    - name: Get latest backup from Cloud Storage
+      id: get_latest_backup
+      run: |
+        gsutil ls gs://my-backups/ | sort -r | head -n 1 > latest_backup.txt
+        echo "Latest backup: $(cat latest_backup.txt)"
+
+    - name: Download backup from Cloud Storage
+      run: |
+        gsutil cp $(cat latest_backup.txt) dump.sql
+
+    - name: Restore backup to PostgreSQL
+      run: |
+        psql -U prod -d bigbox-restored -h localhost -p 5432 < dump.sql

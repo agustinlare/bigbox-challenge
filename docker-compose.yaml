@@ -1,0 +1,31 @@
+version: '3'
+
+networks:
+  bigbox-network:
+services:
+  bigbox-django:
+    container_name: bigbox-django
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - bigbox-database
+    networks:
+      - bigbox-network
+
+  bigbox-database:
+    container_name: bigbox-database
+    image: postgres:13.5
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bigbox
+    networks:
+      - bigbox-network
+
